@@ -1,0 +1,103 @@
+# [NOMBRE MÓDULO] — Contexto del Sub-Agente
+
+> **Contexto global del proyecto:** lee `CLAUDE.md` en la raíz antes de continuar.  
+> Este archivo cubre únicamente las responsabilidades de **[NOMBRE MÓDULO]**.
+
+---
+
+## Responsabilidad del Módulo
+
+[Descripción de qué hace este módulo y qué NO hace]
+
+**Hace:**
+- ...
+
+**NO hace (delega a):**
+- X → ExecutionEngine
+- Y → PositionManager
+
+---
+
+## Estructura de Archivos
+
+```
+src/[modulo]/
+├── [ModuloPrincipal].js      # Clase principal
+├── [SubComponente].js        # Subcomponentes internos
+├── index.js                  # Punto de entrada y exports
+└── __tests__/
+    ├── [Modulo].unit.test.js
+    └── [Modulo].integration.test.js
+```
+
+---
+
+## Interfaces que Expone
+
+```js
+class NombreModulo {
+  constructor({ messagebroker, timeProvider, repository }) { }
+
+  // Métodos públicos con firma y descripción
+  async metodoPublico(param) { } // → ReturnType
+}
+```
+
+---
+
+## Eventos que Emite
+
+| Evento | Cuándo | Payload |
+|--------|--------|---------|
+| `EVENTO_NOMBRE` | Descripción de cuándo | `{ campo: tipo }` |
+
+---
+
+## Eventos que Consume
+
+| Evento | De quién | Qué hace con él |
+|--------|----------|----------------|
+| `EVENTO_NOMBRE` | DataProvider | Descripción |
+
+---
+
+## Dependencias Directas
+
+```js
+// Inyectadas via constructor (nunca instanciadas internamente)
+- MessageBroker    → comunicación con otros módulos
+- TimeProvider     → timestamp actual (NUNCA Date.now())
+- [Repositorio]    → acceso a datos (NUNCA SQL directo)
+```
+
+---
+
+## Reglas Específicas del Módulo
+
+1. Regla crítica de este módulo
+2. Otra regla
+3. ...
+
+---
+
+## Casos de Prueba Críticos
+
+```
+✓ [Caso happy path principal]
+✓ [Caso edge case 1]
+✓ [Caso edge case 2]
+✗ [Caso que DEBE fallar con error descriptivo]
+```
+
+---
+
+## Estado Actual de Implementación
+
+- [ ] Estructura de archivos creada
+- [ ] Clase principal con constructor
+- [ ] Métodos públicos implementados
+- [ ] Eventos emitidos
+- [ ] Eventos consumidos
+- [ ] Tests unitarios
+- [ ] Tests de integración
+- [ ] Documentación inline (JSDoc)

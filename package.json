@@ -1,0 +1,28 @@
+{
+  "name": "nesxtrader",
+  "version": "1.0.0",
+  "description": "Algorithmic crypto trading bot with backtesting",
+  "main": "src/index.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:unit": "vitest run --reporter=verbose",
+    "test:integration": "vitest run --reporter=verbose",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "pg": "^8.11.3",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "@types/pg": "^8.20.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}
