@@ -237,31 +237,40 @@ describe('CandleRepository — unitarios (sin BD)', () => {
     expect(() => new CandleRepository({ db: null })).toThrow('query');
   });
 
-  test('_tableFor lanza con timeframe no soportado', () => {
+  test('lanza con timeframe no soportado', async () => {
     const repo = new CandleRepository({ db: makeDb() });
-    expect(() => repo._tableFor('5m')).toThrow("'5m' no existe");
-    expect(() => repo._tableFor('4h')).toThrow("'4h' no existe");
+    await expect(repo.getCandles('BTCUSDT', '5m', 0, 1)).rejects.toThrow("'5m' no soportado");
+    await expect(repo.getCandles('BTCUSDT', '4h', 0, 1)).rejects.toThrow("'4h' no soportado");
   });
 
-  test('_tableFor retorna tabla correcta para timeframes válidos', () => {
-    const repo = new CandleRepository({ db: makeDb() });
-    expect(repo._tableFor('1s')).toBe('candles_1s');
-    expect(repo._tableFor('1m')).toBe('candles_1m');
-    expect(repo._tableFor('1h')).toBe('candles_1h');
-  });
-
-  test('getCandles construye query con los parámetros correctos', async () => {
+  test('getCandles 1m usa binance_candles con timestamp en segundos', async () => {
     const db = makeDb([]);
     const repo = new CandleRepository({ db });
 
-    await repo.getCandles('BTCUSDT', '1m', 1000, 2000);
+    await repo.getCandles('BTCUSDT', '1m', 1_700_000_000_000, 1_700_003_600_000);
 
     expect(db.query).toHaveBeenCalledTimes(1);
     const [sql, params] = db.query.mock.calls[0];
-    expect(sql).toContain('candles_1m');
+    expect(sql).toContain('binance_candles');
+    expect(sql).toContain('timeframe');
     expect(params).toContain('BTCUSDT');
-    expect(params).toContain(1000);
-    expect(params).toContain(2000);
+    expect(params).toContain('1m');
+    // timestamps convertidos a segundos
+    expect(params).toContain(1_700_000_000);
+    expect(params).toContain(1_700_003_600);
+  });
+
+  test('getCandles 1s usa binance_klines_1s con open_time en ms', async () => {
+    const db = makeDb([]);
+    const repo = new CandleRepository({ db });
+
+    await repo.getCandles('BTCUSDT', '1s', 1_700_000_000_000, 1_700_003_600_000);
+
+    expect(db.query).toHaveBeenCalledTimes(1);
+    const [sql, params] = db.query.mock.calls[0];
+    expect(sql).toContain('binance_klines_1s');
+    expect(params).toContain(1_700_000_000_000);
+    expect(params).toContain(1_700_003_600_000);
   });
 
   test('getLastN lanza si n = 0', async () => {
@@ -269,24 +278,47 @@ describe('CandleRepository — unitarios (sin BD)', () => {
     await expect(repo.getLastN('BTCUSDT', '1m', 0)).rejects.toThrow('entero positivo');
   });
 
-  test('_rowToCandle convierte tipos correctamente', () => {
-    const repo = new CandleRepository({ db: makeDb() });
-    const row = {
+  test('_rowToCandle convierte binance_candles (timestamp en segundos) correctamente', async () => {
+    const timestampSec = 1_700_000_000;
+    const db = makeDb([{
       symbol:    'BTCUSDT',
-      open_time: new Date(1_700_000_000_000).toISOString(),
+      timeframe: '1m',
+      timestamp: timestampSec,
       open:      '30000.5',
       high:      '30500.0',
       low:       '29900.25',
       close:     '30200.75',
       volume:    '123.456',
-    };
+    }]);
+    const repo = new CandleRepository({ db });
 
-    const c = repo._rowToCandle(row, '1m');
+    const candles = await repo.getCandles('BTCUSDT', '1m', 0, 9_999_999_999_999);
 
-    expect(c.openTime).toBe(1_700_000_000_000);
-    expect(c.open).toBe(30000.5);
-    expect(typeof c.high).toBe('number');
-    expect(c.isClosed).toBe(true);
-    expect(c.timeframe).toBe('1m');
+    expect(candles[0].openTime).toBe(timestampSec * 1000);
+    expect(candles[0].open).toBe(30000.5);
+    expect(typeof candles[0].high).toBe('number');
+    expect(candles[0].isClosed).toBe(true);
+    expect(candles[0].timeframe).toBe('1m');
+  });
+
+  test('_rowToCandle1s convierte binance_klines_1s (open_time en ms) correctamente', async () => {
+    const openTimeMs = 1_700_000_000_000;
+    const db = makeDb([{
+      symbol:      'BTCUSDT',
+      open_time:   openTimeMs,
+      open_price:  '30000.5',
+      high_price:  '30500.0',
+      low_price:   '29900.25',
+      close_price: '30200.75',
+      volume:      '123.456',
+    }]);
+    const repo = new CandleRepository({ db });
+
+    const candles = await repo.getCandles('BTCUSDT', '1s', 0, 9_999_999_999_999);
+
+    expect(candles[0].openTime).toBe(openTimeMs);
+    expect(candles[0].open).toBe(30000.5);
+    expect(candles[0].timeframe).toBe('1s');
+    expect(candles[0].isClosed).toBe(true);
   });
 });

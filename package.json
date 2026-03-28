@@ -12,13 +12,15 @@
     "test:unit": "vitest run --reporter=verbose",
     "test:integration": "vitest run --reporter=verbose",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "backtest": "tsx scripts/backtest.ts"
   },
   "dependencies": {
     "pg": "^8.11.3",
     "ws": "^8.16.0"
   },
   "devDependencies": {
+    "tsx": "^4.19.3",
     "@types/node": "^22.19.15",
     "@types/pg": "^8.20.0",
     "@types/ws": "^8.18.1",
