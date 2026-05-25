@@ -13,4 +13,4 @@ Crear uno: `npm run exp -- new <id>` (crea la rama `exp/<id>` y el archivo `<id>
 
 | Experimento | Estado | Hipótesis (1 línea) | Fecha |
 |-------------|--------|---------------------|-------|
-| _(aún ninguno)_ | | | |
+| [marubozu-long](marubozu-long.md) | ❌ descartado | Continuación alcista tras marubozu en BTC 1m | 2026-05-25 |
