@@ -38,9 +38,20 @@ Primer candidato con edge real, robusto y que sobrevive comisiones. No "vence" a
 en retorno bruto en bull, pero da mejor retorno ajustado a riesgo en el ciclo completo y
 protección en crashes — propiedad legítima y desplegable.
 
+## Vol-targeting (objetivo 50% vol anual, ventana 30d, maxLev 1.5) — MEJORA
+| Config | IS Sharpe | IS maxDD | OOS Sharpe | OOS CAGR | OOS maxDD |
+|--------|-----------|----------|------------|----------|-----------|
+| Buy&Hold | 0.44 | 81% | 1.42 | 74% | 32% |
+| N=30 plain | 0.80 | 64% | 1.41 | 56% | 36% |
+| **N=30 volTgt** | **0.94** | **52%** | **1.54** | **74%** | 37% |
+| N=20 volTgt | 1.14 | 53% | 1.45 | 64% | 28% |
+
+Con vol-targeting, N=30 iguala el CAGR del buy&hold en bull (74%) con MEJOR Sharpe (1.54),
+y en bear (IS) Sharpe 0.94 vs 0.44 con la mitad del drawdown. N=20-30 es el sweet spot.
+**Caveat:** maxLev 1.5 usa apalancamiento (funding no modelado); maxLev 1.0 = versión spot.
+
 ## Siguientes pasos
-1. **Gestión de volatilidad** (escalar posición por vol inversa) — la literatura dice que
-   mitiga los "momentum crashes" y suele subir el Sharpe.
-2. **Long/short** vs long/flat (¿agrega valor el corto en bear, neto de funding?).
-3. **Robustez en otro activo líquido** (ETH) — ¿se sostiene el edge?
-4. Métricas adicionales (Calmar, Sortino) y validación walk-forward.
+1. ✅ Gestión de volatilidad — hecho, mejora Sharpe y corta drawdown.
+2. **Robustez en ETH** (y otra alt líquida) — ¿el edge generaliza más allá de BTC? (clave)
+3. **Long/short** vs long/flat (¿agrega el corto, neto de funding?).
+4. Walk-forward (ventanas rodantes) + métricas (Calmar). Modelar funding si usamos maxLev>1.

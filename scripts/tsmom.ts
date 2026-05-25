@@ -31,7 +31,20 @@ function parseArgs() {
     lookbacks: get('--lookbacks', '10,20,30,50,100').split(',').map(s => parseInt(s, 10)),
     feeFrac:   parseFloat(get('--fee', '0.04')) / 100,
     mode:      get('--mode', 'long-flat') as 'long-flat' | 'long-short',
+    targetVol: parseFloat(get('--target-vol', '0.5')),   // vol anualizada objetivo (0.5 = 50%)
+    volWindow: parseInt(get('--vol-window', '30'), 10),   // ventana de vol realizada (días)
+    maxLev:    parseFloat(get('--max-lev', '1.5')),       // apalancamiento máximo del vol-targeting
   };
+}
+
+/** Retornos diarios de la estrategia: pos(t-1)·ret(t) menos fee por cambio de posición. */
+function stratReturns(pos: number[], ret: number[], feeFrac: number): number[] {
+  return ret.map((r, i) => {
+    if (i === 0) return 0;
+    const p = pos[i - 1]!;
+    const change = Math.abs((pos[i - 1] ?? 0) - (pos[i - 2] ?? 0));
+    return p * r - change * feeFrac;
+  });
 }
 
 interface Metrics { ret: number; cagr: number; sharpe: number; maxDD: number; expoPct: number; trades: number; days: number; }
@@ -48,8 +61,9 @@ function metricsOf(stratRet: number[], i0: number, i1: number, signals: number[]
     if (equity > peak) peak = equity;
     const dd = (peak - equity) / peak;
     if (dd > maxDD) maxDD = dd;
-    if ((signals[i - 1] ?? 0) !== 0) inMarket++;
-    if ((signals[i] ?? 0) !== (signals[i - 1] ?? 0)) trades++;
+    // Exposición y "trades" por cambio de RÉGIMEN (signo), no por ajuste de tamaño.
+    if (Math.sign(signals[i - 1] ?? 0) !== 0) inMarket++;
+    if (Math.sign(signals[i] ?? 0) !== Math.sign(signals[i - 1] ?? 0)) trades++;
   }
   const n = rets.length;
   const mean = rets.reduce((s, x) => s + x, 0) / n;
@@ -99,25 +113,38 @@ async function main(): Promise<void> {
     console.log(`  IS : ${fmt(metricsOf(bhStrat, 1, splitIdx - 1, bhSignals))}`);
     console.log(`  OOS: ${fmt(metricsOf(bhStrat, splitIdx, closes.length - 1, bhSignals))}\n`);
 
-    console.log(`TSMOM por lookback (long si retorno de N días > 0):`);
+    // Volatilidad realizada anualizada (std de retornos de las últimas volWindow velas).
+    const realVol: number[] = ret.map((_, i) => {
+      if (i < cfg.volWindow) return NaN;
+      const w = ret.slice(i - cfg.volWindow, i);
+      const m = w.reduce((s, x) => s + x, 0) / w.length;
+      const v = w.reduce((s, x) => s + (x - m) ** 2, 0) / w.length;
+      return Math.sqrt(v) * Math.sqrt(YEAR);
+    });
+
+    console.log(`TSMOM por lookback — plain vs vol-targeted (objetivo ${(cfg.targetVol*100).toFixed(0)}% vol, vol-window ${cfg.volWindow}d, maxLev ${cfg.maxLev}):`);
     for (const N of cfg.lookbacks) {
-      // señal en t = momentum de N días positivo
       const signal: number[] = closes.map((c, i) => {
         if (i < N) return 0;
         const mom = c / closes[i - N]! - 1;
         return mom > 0 ? 1 : (cfg.mode === 'long-short' ? -1 : 0);
       });
-      // retorno de la estrategia: posición de ayer × retorno de hoy, menos fee por cambio de posición
-      const strat: number[] = ret.map((r, i) => {
-        if (i === 0) return 0;
-        const pos = signal[i - 1]!;
-        const change = Math.abs((signal[i - 1] ?? 0) - (signal[i - 2] ?? 0));
-        return pos * r - change * cfg.feeFrac;
+
+      // Vol-targeting: escalar la posición por vol inversa (cap en maxLev).
+      const volPos: number[] = signal.map((s, i) => {
+        const rv = realVol[i];
+        if (!rv || !isFinite(rv) || rv <= 0) return 0;
+        return s * Math.min(cfg.targetVol / rv, cfg.maxLev);
       });
-      const is  = metricsOf(strat, 1, splitIdx - 1, signal);
-      const oos = metricsOf(strat, splitIdx, closes.length - 1, signal);
-      console.log(`  N=${String(N).padStart(3)}d  IS : ${fmt(is)}`);
-      console.log(`         OOS: ${fmt(oos)}`);
+
+      const plain = stratReturns(signal, ret, cfg.feeFrac);
+      const vt    = stratReturns(volPos, ret, cfg.feeFrac);
+
+      console.log(`  N=${String(N).padStart(3)}d`);
+      console.log(`    plain  IS : ${fmt(metricsOf(plain, 1, splitIdx - 1, signal))}`);
+      console.log(`    plain  OOS: ${fmt(metricsOf(plain, splitIdx, closes.length - 1, signal))}`);
+      console.log(`    volTgt IS : ${fmt(metricsOf(vt, 1, splitIdx - 1, volPos))}`);
+      console.log(`    volTgt OOS: ${fmt(metricsOf(vt, splitIdx, closes.length - 1, volPos))}`);
     }
     console.log();
   } finally {
