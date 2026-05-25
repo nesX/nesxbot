@@ -30,6 +30,7 @@ import { MarubozuContinuation }  from './stats/analyzers/MarubozuContinuation.js
 import { WicklessRangeDist }     from './stats/analyzers/WicklessRangeDist.js';
 import { RSIZoneDist }           from './stats/analyzers/RSIZoneDist.js';
 import { OversoldBounce }        from './stats/analyzers/OversoldBounce.js';
+import { EmaBounce }             from './stats/analyzers/EmaBounce.js';
 import { TableReporter }         from './stats/reporters/TableReporter.js';
 import { JsonReporter }          from './stats/reporters/JsonReporter.js';
 import { CsvReporter }           from './stats/reporters/CsvReporter.js';
@@ -244,8 +245,22 @@ function buildAnalyzers(specs: AnalyzerSpec[]): Analyzer[] {
         });
       }
 
+      case 'ema-bounce': {
+        const args = spec.args;
+        return new EmaBounce({
+          emaFast:          args['ema-fast'] !== undefined ? parseInt(args['ema-fast']!, 10)   : undefined,
+          emaSlow:          args['ema-slow'] !== undefined ? parseInt(args['ema-slow']!, 10)   : undefined,
+          tpPct:            args['tp-pct']   !== undefined ? parseFloat(args['tp-pct']!)        : undefined,
+          slPct:            args['sl-pct']   !== undefined ? parseFloat(args['sl-pct']!)        : undefined,
+          lookahead:        args['lookahead'] !== undefined ? parseInt(args['lookahead']!, 10) : undefined,
+          minSeparationPct: args['min-sep']  !== undefined ? parseFloat(args['min-sep']!)       : undefined,
+          touchEma:         args['touch-ema'] === 'slow' ? 'slow' : (args['touch-ema'] === 'fast' ? 'fast' : undefined),
+          minTrendSepPct:   args['min-trend-sep'] !== undefined ? parseFloat(args['min-trend-sep']!) : undefined,
+        });
+      }
+
       default:
-        die(`Analyzer desconocido: '${spec.name}'. Disponibles: volume-followthrough, consecutive-streaks, marubozu-continuation, wickless-range-dist, rsi-zone-dist, oversold-bounce`);
+        die(`Analyzer desconocido: '${spec.name}'. Disponibles: volume-followthrough, consecutive-streaks, marubozu-continuation, wickless-range-dist, rsi-zone-dist, oversold-bounce, ema-bounce`);
         // never reached pero TypeScript lo necesita
         throw new Error();
     }

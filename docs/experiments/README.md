@@ -13,4 +13,4 @@ Crear uno: `npm run exp -- new <id>` (crea la rama `exp/<id>` y el archivo `<id>
 
 | Experimento | Estado | Hipótesis (1 línea) | Fecha |
 |-------------|--------|---------------------|-------|
-| _(aún ninguno)_ | | | |
+| [ema-bounce](ema-bounce.md) | ❌ descartado (recon) | Rebote al tocar EMA200/365 en tendencia — ~50/50, sin edge | 2026-05-25 |

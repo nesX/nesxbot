@@ -33,3 +33,4 @@ agregar una fila. Formato: qué hace · dónde · cuándo.
 | `wickless-range-dist` | Distribución de rango en velas sin mecha. | — | (previo) |
 | `rsi-zone-dist` | Distribución de zonas de RSI. | — | (previo) |
 | `oversold-bounce` | Reversión a la media LONG: rebote TP/SL tras RSI en sobreventa (con filtro de tendencia opcional). | 2024 BTC 1m: **sin edge** — pierde a 1:1 (cuchillo cayendo), moneda al aire incluso en uptrend. | 2026-05-25 |
+| `ema-bounce` | Rebote LONG al tocar EMA (fast/slow) en tendencia, por número de toque, con filtro de separación y tendencia fuerte. | 2024 BTC 5m/1m: **sin edge** — ~50% a 1:1 en EMA200 y EMA365; toque profundo y trend fuerte no mejoran (muestra colapsa). | 2026-05-25 |
