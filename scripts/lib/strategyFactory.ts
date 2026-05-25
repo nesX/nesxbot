@@ -12,6 +12,7 @@
 
 import SpinningTopFibStrategy   from '../../src/strategy/strategies/SpinningTopFibStrategy.js';
 import WhipsawReversionStrategy from '../../src/strategy/strategies/WhipsawReversionStrategy.js';
+import MarubozuLongStrategy     from '../../src/strategy/strategies/MarubozuLongStrategy.js';
 import type StrategyBase        from '../../src/strategy/StrategyBase.js';
 
 type Params = Record<string, unknown>;
@@ -57,6 +58,21 @@ export const STRATEGY_TYPES: Record<string, StrategyEntry> = {
       riskPercent:           1,
     },
     build: (p) => new WhipsawReversionStrategy(p as never),
+  },
+
+  'marubozu-long': {
+    defaults: {
+      candleInterval:    1,
+      minRangePercent:   0.3,
+      maxWickPercent:    15,
+      slMult:            1.0,
+      tp1RR:             1.0,
+      tp1SizePercent:    100,
+      tp2RR:             null,
+      moveSlToBreakeven: false,
+      riskPercent:       1,
+    },
+    build: (p) => new MarubozuLongStrategy(p as never),
   },
 };
 
