@@ -3,3 +3,7 @@ dist/
 .env
 .env.local
 *.log
+
+# Salidas generadas de backtest / stats (no versionar — se regeneran)
+docs/backtest/results/
+results/

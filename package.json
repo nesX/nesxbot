@@ -12,8 +12,16 @@
     "test:unit": "vitest run --reporter=verbose",
     "test:integration": "vitest run --reporter=verbose",
     "typecheck": "tsc --noEmit",
+    "typecheck:all": "tsc -p tsconfig.scripts.json",
     "build": "tsc",
-    "backtest": "tsx scripts/backtest.ts"
+    "init-db": "tsx scripts/init-db.ts",
+    "rbt": "tsx scripts/run-backtest.ts",
+    "compare-runs": "tsx scripts/compare-runs.ts",
+    "exp": "tsx scripts/experiment.ts",
+    "backtest": "tsx scripts/backtest.ts",
+    "backtest-whipsaw": "tsx scripts/backtest-whipsaw.ts",
+    "grid-search": "tsx scripts/grid-search.ts",
+    "stats": "tsx scripts/stats.ts"
   },
   "dependencies": {
     "pg": "^8.11.3",

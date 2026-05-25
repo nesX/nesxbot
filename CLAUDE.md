@@ -170,6 +170,26 @@ BacktestRunner
 
 ---
 
+## Regla de versionado para pruebas y experimentos (red de seguridad)
+
+> Esta es una convención que Claude DEBE seguir (no es un hook del sistema). Su fin es
+> poder hacer rollback de cualquier prueba. Detalle del flujo en `docs/autonomy/workflow.md`.
+
+**Código nuevo de estrategias / experimentos** (variantes de estrategia, scripts de una prueba):
+1. Trabaja en una rama de experimento: `npm run exp -- new <id>` (crea `exp/<id>` + bitácora en `docs/experiments/<id>.md`).
+2. **Un commit por iteración** mientras se prueba: `npm run exp -- iterate "qué cambió"` (solo commitea si pasan typecheck + tests).
+3. **Un solo push por prueba**: al cerrar la prueba (cuando termino de iterar y reporto), se hace `git push` de la rama una vez. Varios commits → un push.
+
+**Cambios al motor (src/backtest, src/data, etc.) o fixes de base:** NO los apliques por tu cuenta dentro de una prueba.
+**PREGUNTA primero** al usuario para decidir el alcance:
+- ¿el cambio es **solo para las pruebas actuales** → queda en la rama `exp/<id>`; o
+- ¿se aplica a **main** porque es una mejora/fix útil para futuras pruebas?
+
+Solo el código de experimento se versiona automáticamente bajo esta regla. La infraestructura y los
+fixes pasan por confirmación explícita del usuario.
+
+---
+
 ## Guía de Sub-Agentes
 
 Cuando trabajes en un módulo específico, abre la conversación del sub-agente correspondiente.  

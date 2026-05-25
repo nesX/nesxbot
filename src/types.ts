@@ -27,6 +27,8 @@ export interface TradePlan {
   stopLoss: number;
   takeProfits: TakeProfit[];
   riskPercent: number;
+  /** Si true, el FillSimulator mueve el SL a breakeven al tocar el primer TP parcial */
+  moveSlToBreakeven?: boolean;
   metadata?: Record<string, unknown>;
 }
 
@@ -46,6 +48,9 @@ export interface ExitFill {
 export interface FillResult {
   tradeId: string;
   entryFill: EntryFill;
+  /** Fills intermedios (TP1, TP2, ...) antes del cierre final */
+  partialFills: ExitFill[];
+  /** Último cierre (TP final, SL, o MANUAL) */
   exitFill: ExitFill;
   pnl: number;
   pnlPercent: number;

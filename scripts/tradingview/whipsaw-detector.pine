@@ -1,0 +1,287 @@
+// This Pine Script™ code is subject to the Mozilla Public License 2.0
+// © nesXTrader
+
+//@version=5
+indicator("Whipsaw Detector", overlay=true, max_boxes_count=500, max_labels_count=500)
+
+// ─── Parámetros del detector ──────────────────────────────────────────────────
+grpDet = "Detector de Whipsaw"
+
+i_volMult = input.float(
+     3.0, "Multiplicador de volatilidad",
+     minval=0.5, maxval=10.0, step=0.1,
+     group=grpDet,
+     tooltip="El rango de la vela debe ser > SMA(rangos) × este valor para iniciar el tracking del spike.")
+
+i_smaPeriod = input.int(
+     50, "Período SMA rangos",
+     minval=5, maxval=500,
+     group=grpDet,
+     tooltip="Ventana del SMA para calcular el rango promedio. Más alto = umbral más estable.")
+
+i_dispThres = input.float(
+     0.3, "Umbral de displacement",
+     minval=0.01, maxval=0.99, step=0.01,
+     group=grpDet,
+     tooltip="|close − openSpike| / rango < umbral → whipsaw confirmado. Más bajo = más estricto.")
+
+i_minBars = input.int(
+     5, "Barras mínimas",
+     minval=1, maxval=50,
+     group=grpDet,
+     tooltip="Barras mínimas que deben pasar antes de evaluar el displacement.")
+
+i_maxBars = input.int(
+     20, "Barras máximas",
+     minval=2, maxval=200,
+     group=grpDet,
+     tooltip="Si llega a este número sin confirmar, se descarta como movimiento tendencial.")
+
+// ─── Colores de velas ─────────────────────────────────────────────────────────
+grpColor = "Colores de velas"
+
+i_colorWhipsaw = input.color(
+     color.new(#9C27B0, 0), "Vela de confirmación (whipsaw)",
+     group=grpColor,
+     tooltip="Color de la vela donde se confirma el whipsaw.")
+
+i_colorSpike = input.color(
+     color.new(#FF9800, 40), "Velas del spike (tracking activo)",
+     group=grpColor,
+     tooltip="Color de las velas mientras el detector está en modo spike_active o evaluating.")
+
+// ─── Visual — caja del spike ──────────────────────────────────────────────────
+grpBox = "Caja del spike"
+
+i_showBox = input.bool(
+     true, "Mostrar caja del rango",
+     group=grpBox,
+     tooltip="Dibuja un rectángulo desde la vela de inicio hasta la de confirmación, mostrando el rango del spike.")
+
+i_colorBoxBg = input.color(
+     color.new(#9C27B0, 85), "Relleno de la caja",
+     group=grpBox)
+
+i_colorBoxBorder = input.color(
+     color.new(#9C27B0, 20), "Borde de la caja",
+     group=grpBox)
+
+i_showLabel = input.bool(
+     true, "Mostrar etiqueta 'W'",
+     group=grpBox,
+     tooltip="Muestra una etiqueta 'W' encima de la vela de confirmación.")
+
+// ─── Zonas de proyección ──────────────────────────────────────────────────────
+grpZones = "Zonas de proyección"
+
+i_showZones = input.bool(
+     false, "Mostrar zonas proyectadas",
+     group=grpZones,
+     tooltip="Dibuja las zonas de entrada de la estrategia WhipsawReversion a partir del rango del whipsaw.")
+
+i_projMin = input.float(
+     1.8, "Proyección mínima (borde interior)",
+     minval=1.01, maxval=10.0, step=0.05,
+     group=grpZones,
+     tooltip="Distancia mínima desde el extremo del whipsaw, en múltiplos del rango.")
+
+i_projMax = input.float(
+     2.1, "Proyección máxima (borde exterior)",
+     minval=1.05, maxval=10.0, step=0.05,
+     group=grpZones,
+     tooltip="Distancia máxima desde el extremo del whipsaw, en múltiplos del rango.")
+
+i_zoneBars = input.int(
+     50, "Duración de las zonas (barras)",
+     minval=5, maxval=500,
+     group=grpZones,
+     tooltip="Cuántas barras hacia adelante se dibujan las zonas de proyección.")
+
+i_colorZoneUp = input.color(
+     color.new(#F44336, 75), "Zona UP — SHORT",
+     group=grpZones,
+     tooltip="Zona roja: cuando el precio llega aquí, se busca entrada SHORT.")
+
+i_colorZoneDown = input.color(
+     color.new(#4CAF50, 75), "Zona DOWN — LONG",
+     group=grpZones,
+     tooltip="Zona verde: cuando el precio llega aquí, se busca entrada LONG.")
+
+i_colorZoneUpBorder = input.color(
+     color.new(#F44336, 0), "Borde zona UP",
+     group=grpZones)
+
+i_colorZoneDownBorder = input.color(
+     color.new(#4CAF50, 0), "Borde zona DOWN",
+     group=grpZones)
+
+// ─── Estado persistente ───────────────────────────────────────────────────────
+// Máquina de estados: monitoring → spike_active → evaluating → monitoring
+var string phase          = "monitoring"
+var float  st_spikeHigh   = na
+var float  st_spikeLow    = na
+var float  st_peakRange   = na
+var float  st_spikeOpenPx = na
+var int    st_spikeBars   = 0
+var int    st_startBar    = na
+
+// ─── Cálculo del rango y SMA ──────────────────────────────────────────────────
+float rangeVal = high - low
+float smaRange = ta.sma(rangeVal, i_smaPeriod)
+
+// ─── Variables resultado de esta barra ────────────────────────────────────────
+bool  isWhipsawBar = false
+bool  isSpikeBar   = false
+
+// Para dibujar al confirmar
+bool  confirmed  = false
+float cHigh      = na
+float cLow       = na
+float cRange     = na
+int   cStartBar  = na
+
+// ─── Máquina de estados ───────────────────────────────────────────────────────
+
+if phase == "monitoring"
+    // Activar tracking si la vela es volátil y el SMA está listo
+    if not na(smaRange) and rangeVal > i_volMult * smaRange
+        phase           := "spike_active"
+        st_spikeHigh   := high
+        st_spikeLow    := low
+        st_peakRange   := rangeVal
+        st_spikeOpenPx := open
+        st_spikeBars   := 1
+        st_startBar    := bar_index
+        isSpikeBar     := true
+
+else if phase == "spike_active"
+    isSpikeBar   := true
+    st_spikeBars := st_spikeBars + 1
+    st_spikeHigh := math.max(st_spikeHigh, high)
+    st_spikeLow  := math.min(st_spikeLow,  low)
+    st_peakRange := math.max(st_peakRange, rangeVal)
+
+    if st_spikeBars >= i_minBars
+        float sRange = st_spikeHigh - st_spikeLow
+        float ratio  = sRange == 0.0 ? 1.0 : math.abs(close - st_spikeOpenPx) / sRange
+
+        if ratio < i_dispThres
+            // ── Whipsaw confirmado en minBars ──
+            confirmed   := true
+            cHigh       := st_spikeHigh
+            cLow        := st_spikeLow
+            cRange      := cHigh - cLow
+            cStartBar   := st_startBar
+            isWhipsawBar := true
+            // Reset
+            phase          := "monitoring"
+            st_spikeHigh   := na
+            st_spikeLow    := na
+            st_peakRange   := na
+            st_spikeOpenPx := na
+            st_spikeBars   := 0
+            st_startBar    := na
+        else
+            // Extender evaluación hasta maxBars
+            phase := "evaluating"
+
+else if phase == "evaluating"
+    isSpikeBar   := true
+    st_spikeBars := st_spikeBars + 1
+    st_spikeHigh := math.max(st_spikeHigh, high)
+    st_spikeLow  := math.min(st_spikeLow,  low)
+    st_peakRange := math.max(st_peakRange, rangeVal)
+
+    float sRange = st_spikeHigh - st_spikeLow
+    float ratio  = sRange == 0.0 ? 1.0 : math.abs(close - st_spikeOpenPx) / sRange
+
+    if ratio < i_dispThres
+        // ── Whipsaw confirmado en zona extendida ──
+        confirmed   := true
+        cHigh       := st_spikeHigh
+        cLow        := st_spikeLow
+        cRange      := cHigh - cLow
+        cStartBar   := st_startBar
+        isWhipsawBar := true
+        // Reset
+        phase          := "monitoring"
+        st_spikeHigh   := na
+        st_spikeLow    := na
+        st_peakRange   := na
+        st_spikeOpenPx := na
+        st_spikeBars   := 0
+        st_startBar    := na
+
+    else if st_spikeBars >= i_maxBars
+        // Tendencial — descartar silenciosamente
+        // Nota: Pine Script no puede hacer replay del buffer; las barras del
+        // período extendido se re-evalúan naturalmente en las siguientes iteraciones.
+        phase          := "monitoring"
+        st_spikeHigh   := na
+        st_spikeLow    := na
+        st_peakRange   := na
+        st_spikeOpenPx := na
+        st_spikeBars   := 0
+        st_startBar    := na
+
+// ─── Colorear velas ───────────────────────────────────────────────────────────
+// Prioridad: whipsaw > spike > color original
+barcolor(isWhipsawBar ? i_colorWhipsaw : isSpikeBar ? i_colorSpike : na)
+
+// ─── Dibujar al confirmar un whipsaw ─────────────────────────────────────────
+if confirmed
+    // Caja del rango del spike
+    if i_showBox
+        box.new(
+             cStartBar, cHigh, bar_index, cLow,
+             border_color = i_colorBoxBorder,
+             bgcolor      = i_colorBoxBg,
+             border_width = 1,
+             extend       = extend.none)
+
+    // Etiqueta de confirmación
+    if i_showLabel
+        label.new(
+             bar_index, high,
+             "W (" + str.tostring(st_spikeBars[0]) + ")",
+             style     = label.style_label_down,
+             color     = i_colorWhipsaw,
+             textcolor = color.white,
+             size      = size.small,
+             tooltip   = "Whipsaw confirmado\nRango: " + str.tostring(math.round(cRange, 2)) +
+                         "\nHigh: "  + str.tostring(math.round(cHigh, 2)) +
+                         "\nLow: "   + str.tostring(math.round(cLow,  2)))
+
+    // Zonas de proyección (misma lógica que WhipsawReversionStrategy.ts)
+    if i_showZones
+        int zEnd = bar_index + i_zoneBars
+
+        // Zona UP → SHORT: [spikeLow + range×projMin, spikeLow + range×projMax]
+        float upLower = cLow + cRange * i_projMin
+        float upUpper = cLow + cRange * i_projMax
+        box.new(
+             bar_index, upUpper, zEnd, upLower,
+             border_color = i_colorZoneUpBorder,
+             bgcolor      = i_colorZoneUp,
+             border_width = 1)
+        label.new(
+             bar_index, upUpper, "SHORT",
+             style     = label.style_label_down,
+             color     = color.new(#F44336, 0),
+             textcolor = color.white,
+             size      = size.tiny)
+
+        // Zona DOWN → LONG: [spikeHigh − range×projMax, spikeHigh − range×projMin]
+        float downUpper = cHigh - cRange * i_projMin
+        float downLower = cHigh - cRange * i_projMax
+        box.new(
+             bar_index, downUpper, zEnd, downLower,
+             border_color = i_colorZoneDownBorder,
+             bgcolor      = i_colorZoneDown,
+             border_width = 1)
+        label.new(
+             bar_index, downLower, "LONG",
+             style     = label.style_label_up,
+             color     = color.new(#4CAF50, 0),
+             textcolor = color.white,
+             size      = size.tiny)

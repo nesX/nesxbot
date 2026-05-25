@@ -20,6 +20,7 @@ function makeFill(overrides: Partial<FillResult> = {}): FillResult {
       timestamp: 1_700_000_000_000,
       slippage:  15,
     },
+    partialFills: [],
     exitFill: {
       price:     31000,
       timestamp: 1_700_000_000_000 + 3600_000,

@@ -180,10 +180,10 @@ class CandleRepository {
     const sql = `
       SELECT symbol, open_time, open_price, high_price, low_price, close_price, volume
       FROM binance_klines_1s
-      WHERE symbol    = $1
-        AND open_time >= $2
-        AND open_time <= $3
-      ORDER BY open_time ASC
+      WHERE symbol         = $1
+        AND open_timestamp >= to_timestamp($2 / 1000.0)
+        AND open_timestamp <= to_timestamp($3 / 1000.0)
+      ORDER BY open_timestamp ASC
     `;
 
     const result = await this._db.query(sql, [symbol, from, to]);
@@ -197,10 +197,10 @@ class CandleRepository {
         SELECT symbol, open_time, open_price, high_price, low_price, close_price, volume
         FROM binance_klines_1s
         WHERE symbol = $1
-        ORDER BY open_time DESC
+        ORDER BY open_timestamp DESC
         LIMIT $2
       ) sub
-      ORDER BY open_time ASC
+      ORDER BY open_timestamp ASC
     `;
 
     const result = await this._db.query(sql, [symbol, n]);
@@ -211,9 +211,9 @@ class CandleRepository {
     const sql = `
       SELECT EXISTS (
         SELECT 1 FROM binance_klines_1s
-        WHERE symbol    = $1
-          AND open_time >= $2
-          AND open_time <= $3
+        WHERE symbol         = $1
+          AND open_timestamp >= to_timestamp($2 / 1000.0)
+          AND open_timestamp <= to_timestamp($3 / 1000.0)
         LIMIT 1
       ) AS exists
     `;

@@ -160,7 +160,7 @@ describe('FillSimulator — selección de modo', () => {
   test('usa PRECISE_1S cuando has1s=true', async () => {
     const candleTs = 1_700_000_000_000;
     const granularCandle = makeCandle({
-      openTime: candleTs,
+      openTime: candleTs + 60_000,   // tras el cierre de la vela de señal (anti-lookahead)
       open:     30050,
       high:     31100,
       low:      30000,
@@ -184,7 +184,7 @@ describe('FillSimulator — selección de modo', () => {
   test('usa PRECISE_1M cuando has1s=false y has1m=true', async () => {
     const candleTs = 1_700_000_000_000;
     const granularCandle = makeCandle({
-      openTime: candleTs,
+      openTime: candleTs + 60_000,   // tras el cierre de la vela de señal (anti-lookahead)
       open:     30050,
       high:     31100,
       low:      30000,
@@ -446,8 +446,8 @@ describe('FillSimulator — modo PRECISE', () => {
   test('PRECISE_1S: el exitType es TP1 cuando el TP es alcanzable sin SL', async () => {
     const ts = 1_700_000_000_000;
     const granularCandles = [
-      makeCandle({ openTime: ts,       open: 30050, high: 30200, low: 30000, close: 30150 }),
-      makeCandle({ openTime: ts + 1000, open: 30150, high: 31100, low: 30100, close: 31050 }),
+      makeCandle({ openTime: ts + 60_000, open: 30050, high: 30200, low: 30000, close: 30150 }),
+      makeCandle({ openTime: ts + 61_000, open: 30150, high: 31100, low: 30100, close: 31050 }),
     ];
 
     const repo = makeRepo({ has1s: true, candles: granularCandles });
@@ -470,7 +470,7 @@ describe('FillSimulator — modo PRECISE', () => {
   test('PRECISE_1M: el exitType es SL cuando solo el SL es tocado', async () => {
     const ts = 1_700_000_000_000;
     const granularCandles = [
-      makeCandle({ openTime: ts, open: 30050, high: 30500, low: 28500, close: 29000 }),
+      makeCandle({ openTime: ts + 60_000, open: 30050, high: 30500, low: 28500, close: 29000 }),
     ];
 
     const repo = makeRepo({ has1s: false, has1m: true, candles: granularCandles });
@@ -493,8 +493,8 @@ describe('FillSimulator — modo PRECISE', () => {
   test('PRECISE: si no se toca ningún nivel, cierra en MANUAL con el último close', async () => {
     const ts = 1_700_000_000_000;
     const granularCandles = [
-      makeCandle({ openTime: ts,        open: 30050, high: 30400, low: 29500, close: 30200 }),
-      makeCandle({ openTime: ts + 1000, open: 30200, high: 30500, low: 29800, close: 30300 }),
+      makeCandle({ openTime: ts + 60_000, open: 30050, high: 30400, low: 29500, close: 30200 }),
+      makeCandle({ openTime: ts + 61_000, open: 30200, high: 30500, low: 29800, close: 30300 }),
     ];
 
     const repo = makeRepo({ has1s: true, candles: granularCandles });

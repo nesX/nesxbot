@@ -327,8 +327,12 @@ describe('Backtest E2E', () => {
       expect(report.trades[0].resolution_mode).toBe('PESSIMISTIC');
     });
 
-    test('el primer trade cerró en TP1 (high de la vela señal supera el nivel más alto)', () => {
-      expect(report.trades[0].exitFill.type).toMatch(/^TP/);
+    test('el primer trade alcanzó TP1 — aparece en partialFills o exitFill', () => {
+      const trade = report.trades[0];
+      const hitTp =
+        trade.exitFill.type.startsWith('TP') ||
+        trade.partialFills.some((f: { type: string }) => f.type.startsWith('TP'));
+      expect(hitTp).toBe(true);
     });
 
     test('el primer trade tiene PnL positivo (cerró en TP)', () => {

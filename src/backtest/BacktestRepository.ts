@@ -218,6 +218,7 @@ class BacktestRepository {
         timestamp: Number(row['entry_ts']),
         slippage:  parseFloat(row['slippage'] as string),
       },
+      partialFills: [],
       exitFill: {
         price:     parseFloat(row['exit_price'] as string),
         timestamp: Number(row['exit_ts']),

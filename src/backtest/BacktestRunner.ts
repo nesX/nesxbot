@@ -218,6 +218,17 @@ class BacktestRunner {
         fillResult: fillResult as unknown as Record<string, unknown>,
       });
 
+      // Emitir PARTIAL_FILLED por cada cierre parcial (TP1, TP2, ...)
+      for (const partial of fillResult.partialFills) {
+        await this._broker.publish('EXECUTION_PARTIAL_FILLED', {
+          tradeId:       fillResult.tradeId,
+          tpLevel:       partial.tpLevel ?? null,
+          fillPrice:     partial.price,
+          remainingSize: null,
+          timestamp:     partial.timestamp,
+        });
+      }
+      // También emitir si el cierre final es un TP (planes de TP único)
       if (fillResult.exitFill.type && fillResult.exitFill.type.startsWith('TP')) {
         await this._broker.publish('EXECUTION_PARTIAL_FILLED', {
           tradeId:       fillResult.tradeId,
