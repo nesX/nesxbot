@@ -30,6 +30,8 @@ class FillSimulator {
   private _repo: CandleRepository;
   private _timeProvider: TimeProvider;
   private _logger: Logger;
+  /** Comisión taker por lado, en % del notional (ej: 0.04 = 0.04%). 0 = sin fees. */
+  private _takerFeePercent: number;
 
   /**
    * Cache de velas 1s agrupadas por día.
@@ -48,10 +50,11 @@ class FillSimulator {
    */
   private _granularCache = new Map<string, GranularDataInfo>();
 
-  constructor({ candleRepository, timeProvider, logger }: {
+  constructor({ candleRepository, timeProvider, logger, takerFeePercent }: {
     candleRepository: CandleRepository;
     timeProvider: TimeProvider;
     logger?: Logger;
+    takerFeePercent?: number;
   }) {
     if (!candleRepository || typeof (candleRepository as CandleRepository).hasGranularData !== 'function') {
       throw new Error('FillSimulator: se requiere candleRepository con método hasGranularData()');
@@ -60,8 +63,9 @@ class FillSimulator {
       throw new Error('FillSimulator: se requiere timeProvider con método now()');
     }
 
-    this._repo         = candleRepository;
-    this._timeProvider = timeProvider;
+    this._repo            = candleRepository;
+    this._timeProvider    = timeProvider;
+    this._takerFeePercent = takerFeePercent && takerFeePercent > 0 ? takerFeePercent : 0;
     this._logger       = logger || {
       info:  (...a: unknown[]) => console.log('[FillSimulator]', ...a),
       warn:  (...a: unknown[]) => console.warn('[FillSimulator]', ...a),
@@ -370,13 +374,22 @@ class FillSimulator {
     const riskPercent = tradePlan.riskPercent || 1;
     const direction   = tradePlan.direction;
 
-    return fills.reduce((total, fill) => {
+    const grossPnl = fills.reduce((total, fill) => {
       const priceDelta = direction === 'LONG'
         ? fill.price - entryPrice
         : entryPrice - fill.price;
       const rMultiple = priceDelta / slDistance;
       return total + rMultiple * riskPercent * (fill.sizePercent / 100);
     }, 0);
+
+    // Comisiones (round-trip: entrada full + salidas que suman 1 notional).
+    // fee% del capital = 2 · feeTaker% · (riskPercent/100) · (entry/slDistance).
+    // Para SL 0.5% y risk 1% a 0.04%/lado ≈ 0.16% de comisión por trade.
+    const fee = this._takerFeePercent > 0
+      ? 2 * this._takerFeePercent * (riskPercent / 100) * (entryPrice / slDistance)
+      : 0;
+
+    return grossPnl - fee;
   }
 
   private _pnlPercentFromFills(

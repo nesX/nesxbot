@@ -32,6 +32,8 @@ export interface RunConfig {
   riskPercent?: number;
   warmupCandles?: number;
   maxCandles?: number;
+  /** Comisión taker por lado en % del notional (default 0.04 = 0.04%). */
+  takerFeePercent?: number;
   /**
    * Persiste la corrida en backtest_runs / backtest_trades.
    * Por defecto false (grid search corre miles de backtests y no debe guardar
@@ -115,6 +117,7 @@ export async function runBacktest(
     riskPercent    = 1,
     warmupCandles  = 0,
     maxCandles     = 1000,
+    takerFeePercent = 0.04,
     persist        = false,
     silent         = false,
     logger: customLogger,
@@ -149,6 +152,7 @@ export async function runBacktest(
   const fillSimulator = new FillSimulator({
     candleRepository: candleRepo,
     timeProvider,
+    takerFeePercent,
     ...(activeLogger ? { logger: activeLogger } : {}),
   });
 

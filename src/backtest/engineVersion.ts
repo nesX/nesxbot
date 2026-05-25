@@ -14,5 +14,7 @@
  *   2026-05-25.1 — fix de lookahead en la entrada (H1): la entrada se busca desde
  *                  el CIERRE de la vela de señal (openTime + tfMs), no desde su apertura.
  *                  Invalida TODO resultado anterior.
+ *   2026-05-25.2 — (H2) CandleAggregator alineado al reloj + comisiones taker
+ *                  modeladas en el PnL (default 0.04%/lado). Invalida resultados .1.
  */
-export const ENGINE_VERSION = '2026-05-25.1';
+export const ENGINE_VERSION = '2026-05-25.2';

@@ -56,8 +56,10 @@ con tendencia optimista.
   derivando `tfMs` de `contextCandle.timeframe`. Actualizar los tests para reflejar la entrada
   en la vela siguiente. Re-correr una corrida de referencia y comparar el delta.
 
-### H2 · CandleAggregator no alinea a límites de reloj 📝
-**Archivo:** `src/strategy/CandleAggregator.ts:25-31`
+### H2 · CandleAggregator no alinea a límites de reloj ✅ CORREGIDO (2026-05-25)
+**Archivo:** `src/strategy/CandleAggregator.ts:25-31` · Ver ADR-0003.
+Ahora agrupa por bucket de reloj (`floor(openTime/bucketMs)*bucketMs`), solo emite buckets
+completos, openTime alineado. +6 tests. ENGINE_VERSION → 2026-05-25.2.
 
 Agrupa velas 1m en bloques de N **contando desde el índice 0** del array, no desde un límite
 de reloj (`:00, :05, :10...`). Si el array no empieza en un múltiplo de N, las velas
