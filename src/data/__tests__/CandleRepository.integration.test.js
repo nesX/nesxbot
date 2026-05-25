@@ -239,8 +239,8 @@ describe('CandleRepository — unitarios (sin BD)', () => {
 
   test('lanza con timeframe no soportado', async () => {
     const repo = new CandleRepository({ db: makeDb() });
-    await expect(repo.getCandles('BTCUSDT', '5m', 0, 1)).rejects.toThrow("'5m' no soportado");
-    await expect(repo.getCandles('BTCUSDT', '4h', 0, 1)).rejects.toThrow("'4h' no soportado");
+    await expect(repo.getCandles('BTCUSDT', '3d', 0, 1)).rejects.toThrow("'3d' no soportado");
+    await expect(repo.getCandles('BTCUSDT', '999x', 0, 1)).rejects.toThrow("'999x' no soportado");
   });
 
   test('getCandles 1m usa binance_candles con timestamp en segundos', async () => {

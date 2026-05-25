@@ -20,8 +20,10 @@ interface DbClient {
   query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
 }
 
-// Timeframes soportados y la tabla/esquema que los sirve
-const SUPPORTED_TIMEFRAMES = new Set(['1s', '1m', '1h']);
+// Timeframes soportados. '1s' lo sirve binance_klines_1s; el resto, binance_candles
+// (mismo esquema, columna timeframe). Las velas >= '1m' existen desde 2018; el 1m/1s
+// desde 2024. Los timeframes altos (4h, 1d, 1w) habilitan estudios de baja frecuencia.
+const SUPPORTED_TIMEFRAMES = new Set(['1s', '1m', '5m', '15m', '1h', '4h', '1d', '1w']);
 
 class CandleRepository {
   private _db: DbClient;
