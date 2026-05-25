@@ -50,8 +50,19 @@ Con vol-targeting, N=30 iguala el CAGR del buy&hold en bull (74%) con MEJOR Shar
 y en bear (IS) Sharpe 0.94 vs 0.44 con la mitad del drawdown. N=20-30 es el sweet spot.
 **Caveat:** maxLev 1.5 usa apalancamiento (funding no modelado); maxLev 1.0 = versión spot.
 
+## Robustez cross-asset (N=30 vol-targeted) — GENERALIZA
+| Activo | B&H OOS Sharpe | volTgt OOS Sharpe | volTgt OOS CAGR | B&H maxDD(IS) | volTgt maxDD(IS) |
+|--------|----------------|-------------------|-----------------|---------------|------------------|
+| BTC | 1.42 | 1.54 | 74% | 81% | 52% |
+| ETH | 0.79 | 1.18 | 49% | 94% | 42% |
+| BNB | 1.06 | 1.26 | 58% | 80% | 35% |
+
+El mismo N=30 vol-targeted supera al buy&hold en Sharpe en los 3 activos y corta el drawdown
+a la mitad o más. No es sobreajuste a BTC: funciona en 3 historias distintas + 2 regímenes.
+Caveat: las 3 son large-caps correlacionadas (menos de 3 tests independientes); solo ~2 regímenes.
+
 ## Siguientes pasos
-1. ✅ Gestión de volatilidad — hecho, mejora Sharpe y corta drawdown.
-2. **Robustez en ETH** (y otra alt líquida) — ¿el edge generaliza más allá de BTC? (clave)
-3. **Long/short** vs long/flat (¿agrega el corto, neto de funding?).
-4. Walk-forward (ventanas rodantes) + métricas (Calmar). Modelar funding si usamos maxLev>1.
+1. ✅ Vol-targeting — mejora Sharpe y corta drawdown.
+2. ✅ Robustez ETH/BNB — generaliza (N=30 volTgt sólido en los 3).
+3. **Walk-forward** (ventanas rodantes) — el estrés de robustez más fuerte que queda.
+4. **Long/short** y modelar **funding** si se usa maxLev>1 (o versión spot maxLev 1.0).
