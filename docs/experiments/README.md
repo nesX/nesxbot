@@ -13,4 +13,6 @@ Crear uno: `npm run exp -- new <id>` (crea la rama `exp/<id>` y el archivo `<id>
 
 | Experimento | Estado | Hipótesis (1 línea) | Fecha |
 |-------------|--------|---------------------|-------|
-| _(aún ninguno)_ | | | |
+| [marubozu-1h](marubozu-1h.md) | ❌ descartado | Marubozu en 1h (edge bruto 55.6%, no sobrevive fees) | 2026-05-25 |
+| marubozu-long (rama exp/) | ❌ descartado | Continuación marubozu 1m — overfitting + fees | 2026-05-25 |
+| mean-reversion (recon) | ❌ descartado | Rebote LONG tras sobreventa RSI — sin edge en 1m/1h | 2026-05-25 |
