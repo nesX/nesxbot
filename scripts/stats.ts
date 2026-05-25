@@ -29,6 +29,7 @@ import { ConsecutiveStreaks }     from './stats/analyzers/ConsecutiveStreaks.js'
 import { MarubozuContinuation }  from './stats/analyzers/MarubozuContinuation.js';
 import { WicklessRangeDist }     from './stats/analyzers/WicklessRangeDist.js';
 import { RSIZoneDist }           from './stats/analyzers/RSIZoneDist.js';
+import { OversoldBounce }        from './stats/analyzers/OversoldBounce.js';
 import { TableReporter }         from './stats/reporters/TableReporter.js';
 import { JsonReporter }          from './stats/reporters/JsonReporter.js';
 import { CsvReporter }           from './stats/reporters/CsvReporter.js';
@@ -230,8 +231,21 @@ function buildAnalyzers(specs: AnalyzerSpec[]): Analyzer[] {
         });
       }
 
+      case 'oversold-bounce': {
+        const args = spec.args;
+        return new OversoldBounce({
+          rsiPeriod:    args['rsi-period'] !== undefined ? parseInt(args['rsi-period']!, 10) : undefined,
+          osLevel:      args['os-level']   !== undefined ? parseFloat(args['os-level']!)     : undefined,
+          stopPct:      args['stop-pct']   !== undefined ? parseFloat(args['stop-pct']!)     : undefined,
+          rr:           args['rr']         !== undefined ? parseFloat(args['rr']!)           : undefined,
+          lookahead:    args['lookahead']  !== undefined ? parseInt(args['lookahead']!, 10)  : undefined,
+          requireCross: !('no-cross' in args),
+          trendSma:     args['trend-sma']  !== undefined ? parseInt(args['trend-sma']!, 10)  : undefined,
+        });
+      }
+
       default:
-        die(`Analyzer desconocido: '${spec.name}'. Disponibles: volume-followthrough, consecutive-streaks, marubozu-continuation, wickless-range-dist, rsi-zone-dist`);
+        die(`Analyzer desconocido: '${spec.name}'. Disponibles: volume-followthrough, consecutive-streaks, marubozu-continuation, wickless-range-dist, rsi-zone-dist, oversold-bounce`);
         // never reached pero TypeScript lo necesita
         throw new Error();
     }
