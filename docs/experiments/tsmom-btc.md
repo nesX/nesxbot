@@ -1,6 +1,6 @@
 # tsmom-btc: time-series momentum en BTC (diario)
 
-- **Estado:** 🟢 PROMETEDOR (primer edge real y robusto)
+- **Estado:** 🟢 VALIDADO en backtest (walk-forward confirmado) — primer edge real y robusto
 - **Tipo:** estrategia de régimen — long si momentum de N días > 0, fuera si no
 - **Herramienta:** `scripts/tsmom.ts` (backtest vectorizado de retornos, NO FillSimulator)
 - **Rama git:** exp/tsmom-btc
@@ -61,8 +61,25 @@ El mismo N=30 vol-targeted supera al buy&hold en Sharpe en los 3 activos y corta
 a la mitad o más. No es sobreajuste a BTC: funciona en 3 historias distintas + 2 regímenes.
 Caveat: las 3 son large-caps correlacionadas (menos de 3 tests independientes); solo ~2 regímenes.
 
-## Siguientes pasos
-1. ✅ Vol-targeting — mejora Sharpe y corta drawdown.
-2. ✅ Robustez ETH/BNB — generaliza (N=30 volTgt sólido en los 3).
-3. **Walk-forward** (ventanas rodantes) — el estrés de robustez más fuerte que queda.
-4. **Long/short** y modelar **funding** si se usa maxLev>1 (o versión spot maxLev 1.0).
+## Walk-forward (train 2a, test 6m, N elegido solo con datos pasados) — VALIDADO
+| | Walk-forward | Buy&Hold |
+|--|--------------|----------|
+| BTC | CAGR 61%, Sharpe 1.38, maxDD 46% | CAGR 52%, Sharpe 0.99, maxDD 77% |
+| ETH | CAGR 48%, Sharpe 1.11, maxDD 37% | CAGR 69%, Sharpe 1.05, maxDD 79% |
+| BNB | CAGR 60%, Sharpe 1.26, maxDD 47% | CAGR 99%, Sharpe 1.22, maxDD 71% |
+
+- No depende del corte 2022/2023. N elegido adaptativamente es estable (casi siempre 20-30).
+- En los 3 activos: Sharpe ≥ buy&hold y drawdown ~a la mitad. Protección en el bear 2022
+  (WF −40/−11/−26% vs B&H −64/−67/−52%).
+- Matiz: en retorno BRUTO gana en BTC pero pierde en ETH/BNB (bulls extremos). Edge de
+  riesgo gestionado, no de maximizar retorno.
+
+## Conclusión final
+Edge **validado en backtest** (incluido walk-forward): trend-following de cripto con
+vol-targeting. Da mejor retorno ajustado a riesgo que buy&hold y corta los drawdowns a la
+mitad, a costa de upside en bulls extremos. Robusto cross-asset, cross-régimen, fee-proof.
+
+## Pendiente para producción (fuera del alcance backtest actual)
+- Modelar **funding** si maxLev>1 (o usar versión spot maxLev 1.0).
+- Requiere la **capa de ejecución** (hoy no la usamos) para Dry Run / Live.
+- Opcional: long/short, más activos, gestión de cartera multi-activo.

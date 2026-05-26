@@ -34,7 +34,31 @@ function parseArgs() {
     targetVol: parseFloat(get('--target-vol', '0.5')),   // vol anualizada objetivo (0.5 = 50%)
     volWindow: parseInt(get('--vol-window', '30'), 10),   // ventana de vol realizada (días)
     maxLev:    parseFloat(get('--max-lev', '1.5')),       // apalancamiento máximo del vol-targeting
+    walkForward: a.includes('--walk-forward'),
+    trainYears:  parseFloat(get('--train-years', '2')),   // ventana de entrenamiento (años)
+    testMonths:  parseInt(get('--test-months', '6'), 10), // paso de test out-of-sample (meses)
   };
+}
+
+/** Posiciones vol-targeted para un lookback N. */
+function buildVolTgtPositions(N: number, closes: number[], realVol: number[], cfg: ReturnType<typeof parseArgs>): number[] {
+  return closes.map((c, i) => {
+    if (i < N) return 0;
+    const signal = (c / closes[i - N]! - 1) > 0 ? 1 : (cfg.mode === 'long-short' ? -1 : 0);
+    const rv = realVol[i];
+    if (signal === 0 || !rv || !isFinite(rv) || rv <= 0) return signal === 0 ? 0 : signal;
+    return signal * Math.min(cfg.targetVol / rv, cfg.maxLev);
+  });
+}
+
+function sharpeOver(strat: number[], i0: number, i1: number): number {
+  const w: number[] = [];
+  for (let i = i0; i <= i1; i++) w.push(strat[i] ?? 0);
+  if (w.length < 2) return 0;
+  const m = w.reduce((s, x) => s + x, 0) / w.length;
+  const v = w.reduce((s, x) => s + (x - m) ** 2, 0) / w.length;
+  const sd = Math.sqrt(v);
+  return sd > 0 ? (m / sd) * Math.sqrt(YEAR) : 0;
 }
 
 /** Retornos diarios de la estrategia: pos(t-1)·ret(t) menos fee por cambio de posición. */
@@ -121,6 +145,67 @@ async function main(): Promise<void> {
       const v = w.reduce((s, x) => s + (x - m) ** 2, 0) / w.length;
       return Math.sqrt(v) * Math.sqrt(YEAR);
     });
+
+    // -----------------------------------------------------------------------
+    // Walk-forward: elegir el mejor N con datos pasados, aplicarlo al período
+    // siguiente, avanzar. Sin mirar el futuro en la selección de parámetro.
+    // -----------------------------------------------------------------------
+    if (cfg.walkForward) {
+      const perNPos: Record<number, number[]>   = {};
+      const perNStrat: Record<number, number[]> = {};
+      for (const N of cfg.lookbacks) {
+        const pos = buildVolTgtPositions(N, closes, realVol, cfg);
+        perNPos[N]   = pos;
+        perNStrat[N] = stratReturns(pos, ret, cfg.feeFrac);
+      }
+
+      const trainDays = Math.round(cfg.trainYears * YEAR);
+      const testDays  = cfg.testMonths * 30;
+      const wfStrat = new Array(closes.length).fill(0);
+      const wfSign  = new Array(closes.length).fill(0);
+      const picks: { from: string; N: number }[] = [];
+
+      let i = trainDays;
+      const wfStart = trainDays;
+      while (i < closes.length) {
+        const trainStart = i - trainDays;
+        let bestN = cfg.lookbacks[0]!, bestS = -Infinity;
+        for (const N of cfg.lookbacks) {
+          const s = sharpeOver(perNStrat[N]!, trainStart, i - 1);
+          if (s > bestS) { bestS = s; bestN = N; }
+        }
+        const segEnd = Math.min(i + testDays, closes.length) - 1;
+        for (let j = i; j <= segEnd; j++) {
+          wfStrat[j] = perNStrat[bestN]![j];
+          wfSign[j]  = Math.sign(perNPos[bestN]![j] ?? 0);
+        }
+        picks.push({ from: new Date(times[i]!).toISOString().slice(0, 10), N: bestN });
+        i = segEnd + 1;
+      }
+
+      const bhSig = closes.map(() => 1);
+      console.log(`WALK-FORWARD (train ${cfg.trainYears}a, test ${cfg.testMonths}m, candidatos N=${cfg.lookbacks.join('/')}):`);
+      console.log(`  Walk-fwd: ${fmt(metricsOf(wfStrat, wfStart, closes.length - 1, wfSign))}`);
+      console.log(`  Buy&Hold: ${fmt(metricsOf(ret, wfStart, closes.length - 1, bhSig))}`);
+      console.log(`  N elegido por segmento: ${picks.map(p => `${p.from.slice(0,7)}:${p.N}`).join('  ')}`);
+
+      // Desglose por año (walk-forward vs buy&hold)
+      console.log(`\n  Por año (walk-forward / buy&hold):`);
+      const firstYear = new Date(times[wfStart]!).getUTCFullYear();
+      const lastYear  = new Date(times[closes.length - 1]!).getUTCFullYear();
+      for (let y = firstYear; y <= lastYear; y++) {
+        let s = -1, e = -1;
+        for (let k = Math.max(wfStart, 0); k < closes.length; k++) {
+          if (new Date(times[k]!).getUTCFullYear() === y) { if (s === -1) s = k; e = k; }
+        }
+        if (s === -1) continue;
+        const wfm = metricsOf(wfStrat, s, e, wfSign);
+        const bhm = metricsOf(ret, s, e, bhSig);
+        console.log(`    ${y}: WF ret ${(wfm.ret*100).toFixed(0).padStart(5)}% Sharpe ${wfm.sharpe.toFixed(2).padStart(5)} maxDD ${(wfm.maxDD*100).toFixed(0).padStart(3)}%  |  B&H ret ${(bhm.ret*100).toFixed(0).padStart(5)}% Sharpe ${bhm.sharpe.toFixed(2).padStart(5)} maxDD ${(bhm.maxDD*100).toFixed(0).padStart(3)}%`);
+      }
+      console.log();
+      return;
+    }
 
     console.log(`TSMOM por lookback — plain vs vol-targeted (objetivo ${(cfg.targetVol*100).toFixed(0)}% vol, vol-window ${cfg.volWindow}d, maxLev ${cfg.maxLev}):`);
     for (const N of cfg.lookbacks) {
