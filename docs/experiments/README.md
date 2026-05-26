@@ -13,4 +13,5 @@ Crear uno: `npm run exp -- new <id>` (crea la rama `exp/<id>` y el archivo `<id>
 
 | Experimento | Estado | Hipótesis (1 línea) | Fecha |
 |-------------|--------|---------------------|-------|
+| [hammer-1s](hammer-1s.md) | 🔎 catálogo (fase 1) | Martillos de volumen anormal en 1s — 29.895 eventos ≥5× catalogados (2024-2026) | 2026-05-25 |
 | [ema-bounce](ema-bounce.md) | ❌ descartado (recon) | Rebote al tocar EMA200/365 en tendencia — ~50/50, sin edge | 2026-05-25 |
