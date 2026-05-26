@@ -13,4 +13,5 @@ Crear uno: `npm run exp -- new <id>` (crea la rama `exp/<id>` y el archivo `<id>
 
 | Experimento | Estado | Hipótesis (1 línea) | Fecha |
 |-------------|--------|---------------------|-------|
+| [scalp-1s-recon](scalp-1s-recon.md) | ⏸️ recon (revisar c/order book) | Estructura 1s real (ACF +0.11) pero incapturable por taker (edge≪costo) | 2026-05-25 |
 | [ema-bounce](ema-bounce.md) | ❌ descartado (recon) | Rebote al tocar EMA200/365 en tendencia — ~50/50, sin edge | 2026-05-25 |
